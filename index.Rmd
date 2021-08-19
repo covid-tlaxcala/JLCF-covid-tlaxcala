@@ -284,8 +284,8 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 y1 = 19500,
                 yref = "y"),
            list(type = "rect", #third   wave
-                fillcolor = "pink",
-                line = list(color = "pink"),
+                fillcolor = "orange",
+                line = list(color = "orange"),
                 opacity = 0.25,
                 x0 = "2021-07-01",
                 x1 = today,
@@ -294,8 +294,8 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 y1 = 19500,
                 yref = "y"),
            list(type = "rect", #second wave
-                fillcolor = "pink",
-                line = list(color = "pink"),
+                fillcolor = "red",
+                line = list(color = "red"),
                 opacity = 0.25,
                 x0 = "2020-12-01",
                 x1 = "2021-02-14",
@@ -304,8 +304,8 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 y1 = 19000,
                 yref = "y"),
            list(type = "rect", #first wave
-                fillcolor = "red",
-                line = list(color = "red"),
+                fillcolor = "pink",
+                line = list(color = "pink"),
                 opacity = 0.25,
                 x0 = "2020-03-13",
                 x1 = "2020-09-12",
@@ -397,7 +397,8 @@ plot_ly(Mx.2,
             fillcolor = '#45C903') %>% 
   layout(title = '<b>Contagios en México por grupo de edad</b>',
          xaxis = list(title = "<b>Mes</b>",
-                      showgrid = F),
+                      showgrid = F,
+                      tickformat = "%d %B<br>%Y"),
          yaxis = list(title = "<b>Porcentaje de contagios</b>",
                       showgrid = F,
                       ticksuffix = '%'))
@@ -454,7 +455,8 @@ plot_ly(d.f.2,
   layout(title = '<b>Hospitalizados en México por grupo de edad</b>',
          titlefont = list(color = 'darkred'),
          xaxis = list(title = "<b>Mes</b>",
-                      showgrid = F),
+                      showgrid = F,
+                      tickformat = "%d %B<br>%Y"),
          yaxis = list(title = "<b>Porcentaje de hospitalizaciones</b>",
                       showgrid = F,
                       ticksuffix = '%'))
@@ -506,14 +508,14 @@ plot_Casos_Mx <- plot_ly(Decesos_Mx_2,
          barmode = 'stack',
          annotations = list(text = ~paste("<b>Hospitalizados:</b>", n_hosp,
                                           "<br><b>Ambulatorios:</b>", n_amb),
-                            x = "2020-04-20", y = 1000, showarrow=F,
+                            x = "2020-06-20", y = 1200, showarrow=F,
                             font=list(color = "darkgreen")),
          bargap = 0,
          shapes = list(
            list(type = "rect", # third wave ## Current
                 fillcolor = "pink",
                 line = list(color = "pink"),
-                opacity = 0.25,
+                opacity = 0.35,
                 x0 = "2021-07-15",
                 x1 = today,
                 xref = "x",
@@ -521,8 +523,8 @@ plot_Casos_Mx <- plot_ly(Decesos_Mx_2,
                 y1 = 800,
                 yref = "y"),
            list(type = "rect", # second wave
-                fillcolor = "pink",
-                line = list(color = "pink"),
+                fillcolor = "red",
+                line = list(color = "red"),
                 opacity = 0.25,
                 x0 = "2020-12-21",
                 x1 = "2021-02-18",
@@ -531,8 +533,8 @@ plot_Casos_Mx <- plot_ly(Decesos_Mx_2,
                 y1 = 1550,
                 yref = "y"),
            list(type = "rect", # first wave
-                fillcolor = "red",
-                line = list(color = "red"),
+                fillcolor = "pink",
+                line = list(color = "pink"),
                 opacity = 0.25,
                 x0 = "2020-03-28",
                 x1 = "2020-10-09",
@@ -627,7 +629,8 @@ plot_ly(Mx.2,
             fillcolor = '#45C903') %>% 
   layout(title = '<b>Defunciones en México por grupo de edad</b>',
          xaxis = list(title = "<b>Mes</b>",
-                      showgrid = F),
+                      showgrid = F,
+                      tickformat = "%d %B<br>%Y"),
          yaxis = list(title = "<b>Porcentaje de defunciones</b>",
                       showgrid = F,
                       ticksuffix = '%'))
@@ -679,7 +682,8 @@ plot_ly(d.f.2,
   layout(title = '<b>Defunciones de hospitalizados en México por grupo de edad</b>',
          titlefont = list(color = 'darkred'),
          xaxis = list(title = "<b>Mes</b>",
-                      showgrid = F),
+                      showgrid = F,
+                      tickformat = "%d %B<br>%Y"),
          yaxis = list(title = "<b>Porcentaje de defunciones hospitalizados</b>",
                       showgrid = F,
                       ticksuffix = '%'))
@@ -823,27 +827,27 @@ plot_Casos_Tlx <- plot_ly(mn_Tlx_2, x = ~fecha_sintomas, y = ~casos, color = ~ti
                 x1 = today,
                 xref = "x",
                 y0 = 0,
-                y1 = 140,
+                y1 = 160,
                 yref = "y"),
            list(type = "rect", # second wave
-                fillcolor = "pink",
-                line = list(color = "pink"),
+                fillcolor = "red",
+                line = list(color = "red"),
                 opacity = 0.25,
                 x0 = "2020-12-07",
                 x1 = "2021-02-22",
                 xref = "x",
                 y0 = 0,
-                y1 = 140,
+                y1 = 180,
                 yref = "y"),
            list(type = "rect", # first wave
-                fillcolor = "red",
-                line = list(color = "red"),
+                fillcolor = "pink",
+                line = list(color = "pink"),
                 opacity = 0.35,
                 x0 = "2020-04-20",
                 x1 = "2020-09-27",
                 xref = "x",
                 y0 = 0,
-                y1 = 180,
+                y1 = 140,
                 yref = "y"))) %>% 
   config(locale = "es");plot_Casos_Tlx
 
@@ -907,16 +911,16 @@ rm(CasosSexoTlax)
 ```{r Contagios Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
 # Tlaxcala
 # Age group
-Tlx.1 <- ddply(Pos_Tlax, c("fecha_sintomas","Age_group"),
+Tlx.1 <- ddply(Pos_Tlax, c("mes_cont","Age_group"),
                summarise,
-               casos = length(fecha_sintomas))
+               casos = length(mes_cont))
 
 Tlx.2 <- Tlx.1 %>% 
   pivot_wider(names_from = Age_group,
               values_from = casos)
 
 plot_ly(Tlx.2,
-        x =~fecha_sintomas,
+        x =~mes_cont,
         y =~Menores.de.20,
         name = 'Menores de 20',
         type = 'scatter',
@@ -1069,7 +1073,7 @@ plot_def_Tlx <- plot_ly(Defunciones_Tlx_2,
          barmode = 'stack',
          annotations = list(text = ~paste("<b>Hospitalizados:</b>", n_hosp,
                                           "<br><b>Ambulatorios:</b>", n_amb),
-                            x = "2020-06-20", y = 25, showarrow=F,
+                            x = "2020-07-20", y = 25, showarrow=F,
                             font=list(color = "darkgreen")),
          bargap = 0,
          shapes = list(
@@ -1100,14 +1104,14 @@ rm(Defunciones_Tlx_2, n_def_Tlx, n_hosp, n_amb)
 ```{r Defunciones Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
 # México
 # Age group
-Tlx.1 <- ddply(Pos_Tlax, c("fecha_def","Age_group","value"), summarise,
-                           casos = length(fecha_def))
+Tlx.1 <- ddply(Pos_Tlax, c("mes_def","Age_group","value"), summarise,
+                           casos = length(mes_def))
 
 Tlx.2 <- Tlx.1 %>% 
   pivot_wider(names_from = Age_group,
               values_from = casos)
 plot_ly(Tlx.2,
-        x =~fecha_def,
+        x =~mes_def,
         y =~Menores.de.20,
         name = 'Menores de 20',
         type = 'scatter',
@@ -1327,15 +1331,15 @@ edo_COVID <- Mex_Data_COVID[Mex_Data_COVID$state_name == edo,]
 edo_COVID <- edo_COVID[edo_COVID$value == "Positivo",]
 # Estado
 # grupo de edad
-edo.1 <- ddply(edo_COVID, c("fecha_sintomas","Age_group"), summarise,
-                           casos = length(fecha_sintomas))
+edo.1 <- ddply(edo_COVID, c("mes_cont","Age_group"), summarise,
+                           casos = length(mes_cont))
 
 edo.2 <- edo.1 %>% 
   pivot_wider(names_from = Age_group,
               values_from = casos)
 
 plot_ly(edo.2,
-        x =~fecha_sintomas,
+        x =~mes_cont,
         y =~Menores.de.20,
         name = 'Menores de 20',
         type = 'scatter',
