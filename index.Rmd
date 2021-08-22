@@ -178,7 +178,7 @@ mxstate_leaflet(mn_Mx,
   addProviderTiles("CartoDB.Positron")
 ```
 
-```{r Estados-Mx, echo = F, warning=F, eval = F}
+```{r Estados-Mx, echo = F, warning=F}
 mn_Mx_Edos <- ddply(Pos_Mx, c("fecha_sintomas", "tipo_paciente", "sexo","state_name"), summarise,
                     casos = length(value))
 plot_casos_estados <- ggplot(mn_Mx_Edos, aes(x = as.Date(fecha_sintomas), y = casos, fill = tipo_paciente))+
@@ -291,7 +291,7 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 x1 = today,
                 xref = "x",
                 y0 = min(mn_Mx_2$casos),
-                y1 = 19500,
+                y1 = 20000,
                 yref = "y"),
            list(type = "rect", #second wave
                 fillcolor = "red",
@@ -817,7 +817,7 @@ plot_Casos_Tlx <- plot_ly(mn_Tlx_2, x = ~fecha_sintomas, y = ~casos, color = ~ti
                 x1 = today,
                 xref = "x",
                 y0 = 0,
-                y1 = 160,
+                y1 = 170,
                 yref = "y"),
            list(type = "rect", # third wave
                 fillcolor = "pink",
@@ -827,7 +827,7 @@ plot_Casos_Tlx <- plot_ly(mn_Tlx_2, x = ~fecha_sintomas, y = ~casos, color = ~ti
                 x1 = today,
                 xref = "x",
                 y0 = 0,
-                y1 = 160,
+                y1 = 170,
                 yref = "y"),
            list(type = "rect", # second wave
                 fillcolor = "red",
