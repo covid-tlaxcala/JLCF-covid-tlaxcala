@@ -292,7 +292,7 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 x1 = today,
                 xref = "x",
                 y0 = min(mn_Mx_2$casos),
-                y1 = 20000,
+                y1 = 20100,
                 yref = "y"),
            list(type = "rect", #second wave
                 fillcolor = "red",
@@ -599,6 +599,7 @@ Mx.1 <- Mx.1[-grep("Negativo",Mx.1$value),]
 Mx.2 <- Mx.1 %>% 
   pivot_wider(names_from = Age_group,
               values_from = casos)
+Mx.2$fecha_def <- as.Date(Mx.2$fecha_def)
 plot_ly(Mx.2,
         x =~fecha_def,
         y =~Menores.de.20,
@@ -651,6 +652,7 @@ d.f <- d.f[grep("Hospitalizado",d.f$tipo_paciente),]
 d.f.2 <- d.f %>% 
   pivot_wider(names_from = Age_group,
               values_from = casos)
+d.f.2.$fecha_def <- as.Date(d.f.2.$fecha_def)
 plot_ly(d.f.2,
         x =~fecha_def,
         y =~Menores.de.20,
