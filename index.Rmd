@@ -282,7 +282,7 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 x1 = today,
                 xref = "x",
                 y0 = min(mn_Mx_2$casos),
-                y1 = 19500,
+                y1 = 19000,
                 yref = "y"),
            list(type = "rect", #third   wave
                 fillcolor = "orange",
@@ -292,7 +292,7 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 x1 = today,
                 xref = "x",
                 y0 = min(mn_Mx_2$casos),
-                y1 = 20100,
+                y1 = 20200,
                 yref = "y"),
            list(type = "rect", #second wave
                 fillcolor = "red",
@@ -639,7 +639,8 @@ plot_ly(Mx.2,
                       tickformat = "%d %B<br>%Y"),
          yaxis = list(title = "<b>Porcentaje de defunciones</b>",
                       showgrid = F,
-                      ticksuffix = '%'))
+                      ticksuffix = '%')) %>% 
+  config(locale = "es")
 ```
 
 ```{r Defunciones-hospitalizados Mx, warning=FALSE, echo=FALSE, fig.align="center"}
@@ -652,7 +653,7 @@ d.f <- d.f[grep("Hospitalizado",d.f$tipo_paciente),]
 d.f.2 <- d.f %>% 
   pivot_wider(names_from = Age_group,
               values_from = casos)
-d.f.2.$fecha_def <- as.Date(d.f.2.$fecha_def)
+d.f.2$fecha_def <- as.Date(d.f.2$fecha_def)
 plot_ly(d.f.2,
         x =~fecha_def,
         y =~Menores.de.20,
@@ -693,7 +694,8 @@ plot_ly(d.f.2,
                       tickformat = "%d %B<br>%Y"),
          yaxis = list(title = "<b>Porcentaje de defunciones hospitalizados</b>",
                       showgrid = F,
-                      ticksuffix = '%'))
+                      ticksuffix = '%'))%>% 
+  config(locale = "es")
 ```
 
 
@@ -834,7 +836,7 @@ plot_Casos_Tlx <- plot_ly(mn_Tlx_2, x = ~fecha_sintomas, y = ~casos, color = ~ti
                 x1 = today,
                 xref = "x",
                 y0 = 0,
-                y1 = 180,
+                y1 = 190,
                 yref = "y"),
            list(type = "rect", # second wave
                 fillcolor = "red",
