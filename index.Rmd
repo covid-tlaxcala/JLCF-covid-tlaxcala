@@ -181,7 +181,7 @@ mxstate_leaflet(mn_Mx,
   addProviderTiles("CartoDB.Positron")
 ```
 
-```{r Estados-Mx, echo = F, warning=F, eval = F}
+```{r Estados-Mx, echo = F, warning=F, eval = T}
 mn_Mx_Edos <- ddply(Pos_Mx, c("fecha_sintomas", "tipo_paciente", "sexo","state_name"), summarise,
                     casos = length(value))
 plot_casos_estados <- ggplot(mn_Mx_Edos, aes(x = as.Date(fecha_sintomas), y = casos, fill = tipo_paciente))+
@@ -294,7 +294,7 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 x1 = today,
                 xref = "x",
                 y0 = min(mn_Mx_2$casos),
-                y1 = 20400,
+                y1 = 21000,
                 yref = "y"),
            list(type = "rect", #second wave
                 fillcolor = "red",
@@ -1165,7 +1165,7 @@ plot_ly(Tlx.2,
 ```{r Boxplot-Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
 #
 ##
-Defunciones_Tlax$mes_def <- factor(Defunciones_Tlax$mes_def, levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021"))
+Defunciones_Tlax$mes_def <- factor(Defunciones_Tlax$mes_def, levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021"))
 
 Def_edad_Tlx_meses_plot <- plot_ly(Defunciones_Tlax, 
                                    type = 'box', 
