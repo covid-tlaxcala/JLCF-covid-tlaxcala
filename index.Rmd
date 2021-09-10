@@ -181,7 +181,7 @@ mxstate_leaflet(mn_Mx,
   addProviderTiles("CartoDB.Positron")
 ```
 
-```{r Estados-Mx, echo = F, warning=F, eval = T}
+```{r Estados-Mx, echo = F, warning=F, eval = F}
 mn_Mx_Edos <- ddply(Pos_Mx, c("fecha_sintomas", "tipo_paciente", "sexo","state_name"), summarise,
                     casos = length(value))
 plot_casos_estados <- ggplot(mn_Mx_Edos, aes(x = as.Date(fecha_sintomas), y = casos, fill = tipo_paciente))+
