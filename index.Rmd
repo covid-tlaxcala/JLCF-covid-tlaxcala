@@ -45,7 +45,7 @@ temp <- tempfile()
 download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip",temp)
 date <- substring(gsub("-", "", Sys.Date()),3)
 database_title <- paste(date,"COVID19MEXICO.csv", sep = "")
-#database_title <- paste("210821COVID19MEXICO.csv")
+#database_title <- paste("210911COVID19MEXICO.csv")
 Mex_Data_COVID <- read.csv(unz(temp, database_title))
 unlink(temp); rm(temp, date, database_title)
 ```
@@ -284,7 +284,7 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 x1 = today,
                 xref = "x",
                 y0 = min(mn_Mx_2$casos),
-                y1 = 19000,
+                y1 = 15000,
                 yref = "y"),
            list(type = "rect", #third   wave
                 fillcolor = "orange",
@@ -294,7 +294,7 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 x1 = today,
                 xref = "x",
                 y0 = min(mn_Mx_2$casos),
-                y1 = 21000,
+                y1 = 22000,
                 yref = "y"),
            list(type = "rect", #second wave
                 fillcolor = "red",
