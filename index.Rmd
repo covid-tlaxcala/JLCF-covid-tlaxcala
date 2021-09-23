@@ -48,6 +48,7 @@ database_title <- paste(date,"COVID19MEXICO.csv", sep = "")
 #database_title <- paste("210916COVID19MEXICO.csv")
 Mex_Data_COVID <- read.csv(unz(temp, database_title))
 unlink(temp); rm(temp, date, database_title)
+
 ```
 
 ``` {r Asignando casos, include=FALSE, warning=FALSE, fig.align="center"}
