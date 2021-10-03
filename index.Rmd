@@ -113,7 +113,8 @@ Mex_Data_COVID <- Mex_Data_COVID %>% mutate(mes_def = case_when(
   startsWith(fecha_def, "2021-06-") ~ "Junio 2021",
   startsWith(fecha_def, "2021-07-") ~ "Julio 2021",
   startsWith(fecha_def, "2021-08-") ~ "Agosto 2021",
-  startsWith(fecha_def, "2021-09-") ~ "Septiembre 2021"))
+  startsWith(fecha_def, "2021-09-") ~ "Septiembre 2021",
+  startsWith(fecha_def, "2021-10-") ~ "Octubre 2021"))
 
 Mex_Data_COVID <- Mex_Data_COVID %>% mutate(mes_cont = case_when(
   startsWith(fecha_sintomas, "2020-01-") ~ "Enero 2020",
@@ -136,10 +137,11 @@ Mex_Data_COVID <- Mex_Data_COVID %>% mutate(mes_cont = case_when(
   startsWith(fecha_sintomas, "2021-06-") ~ "Junio 2021",
   startsWith(fecha_sintomas, "2021-07-") ~ "Julio 2021",
   startsWith(fecha_sintomas, "2021-08-") ~ "Agosto 2021",
-  startsWith(fecha_sintomas, "2021-09-") ~ "Septiembre 2021"))
+  startsWith(fecha_sintomas, "2021-09-") ~ "Septiembre 2021",
+  startsWith(fecha_sintomas, "2021-10-") ~ "Octubre 2021"))
   
-Mex_Data_COVID$mes_cont <- factor(Mex_Data_COVID$mes_cont,  levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021"))
-Mex_Data_COVID$mes_def <- factor(Mex_Data_COVID$mes_def,  levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021"))
+Mex_Data_COVID$mes_cont <- factor(Mex_Data_COVID$mes_cont,  levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021", "Octubre 2021"))
+Mex_Data_COVID$mes_def <- factor(Mex_Data_COVID$mes_def,  levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021","Octubre 2021"))
 ```
 
 ```{r Pos/Neg, echo = F, warning=F}
@@ -1166,7 +1168,7 @@ plot_ly(Tlx.2,
 ```{r Boxplot-Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
 #
 ##
-Defunciones_Tlax$mes_def <- factor(Defunciones_Tlax$mes_def, levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021"))
+Defunciones_Tlax$mes_def <- factor(Defunciones_Tlax$mes_def, levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021","Octubre 2021"))
 
 Def_edad_Tlx_meses_plot <- plot_ly(Defunciones_Tlax, 
                                    type = 'box', 
