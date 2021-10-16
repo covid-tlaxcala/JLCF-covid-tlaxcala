@@ -20,6 +20,7 @@ h2 {color: darkblue;}
 
 ```{r Libraries, include=FALSE, warning=FALSE, fig.align="center"}
 # Loading libraries
+#
 library(tidyr)
 #install.packages("janitor")
 library(janitor)
@@ -303,7 +304,7 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 line = list(color = "orange"),
                 opacity = 0.25,
                 x0 = "2021-07-01",
-                x1 = "2021-08-28",
+                x1 = "2021-09-10",
                 xref = "x",
                 y0 = min(mn_Mx_2$n),
                 y1 = 22000,
@@ -850,7 +851,7 @@ plot_Casos_Tlx <- plot_ly(mn_Tlx_2, x = ~fecha_sintomas, y = ~n, color = ~tipo_p
                             font=list(color = "darkgreen")),
          bargap = 0,
          shapes = list(
-           list(type = "rect",
+           list(type = "rect", # active cases
                 fillcolor = "purple",
                 line = list(color = "purple"),
                 opacity = 0.2,
@@ -858,7 +859,7 @@ plot_Casos_Tlx <- plot_ly(mn_Tlx_2, x = ~fecha_sintomas, y = ~n, color = ~tipo_p
                 x1 = today,
                 xref = "x",
                 y0 = 0,
-                y1 = 170,
+                y1 = 75,
                 yref = "y"),
            list(type = "rect", # third wave
                 fillcolor = "pink",
