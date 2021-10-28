@@ -42,7 +42,7 @@ library(ggpubr)
 ```{r Database, include=FALSE, warning=FALSE, fig.align="center"}
 # Downloading the database from government portal
 rm(list=ls())
-temp <- tempfile()
+temp <- tempfile() 
 download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip",temp)
 date <- substring(gsub("-", "", Sys.Date()),3)
 database_title <- paste(date,"COVID19MEXICO.csv", sep = "")
@@ -726,9 +726,6 @@ plot_ly(d.f.2,
 
 rm(d.f, d.f.2)
 ```
-
-
-## Porcentaje de defunciones en el país
 
 ```{r Porcentaje Defunciones México,warning=FALSE, echo=FALSE, fig.align="center", eval = F}
 names(mn_Mx)[names(mn_Mx) == "value"] <- "Infectados"
