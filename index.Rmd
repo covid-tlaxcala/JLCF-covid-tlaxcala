@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = T)
 ```
 
-``` {css Colors, echo = F}
+```{css Colors, echo = F}
 h1 {color: darkred;}
 h2 {color: darkblue;}
 ```
@@ -242,7 +242,6 @@ ggsave(title_plot_def, plot_defunciones_estados, dpi = 500, width = 13, height =
 
 rm(mn_Mx_Edos, plot_casos_estados, mn_Def_Mx_Edos, plot_defunciones_estados, title_plot_cases, title_plot_def)
 ```
-
 
 ```{r Casos-Mx, echo = F, warning=F}
 mn_Mx_2 <- Pos_Mx %>% 
@@ -614,7 +613,6 @@ DecesosSexoMex_plot <- plot_ly(DecesosSexoMex,
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)); DecesosSexoMex_plot
 rm(Decesos_Mx, NumFallMex, Decesos_Mx_St, Decesos_Mx_2, n_amb, n_hosp, n_Mx, plot_Casos_Mx,sum_decesos, MujDecMexAmb, MujDecMexHosp, HomDecMexAmb, HomDecMexHosp, DecesosSexoMex)
 ```
-
 
 ```{r Defunciones Mx, warning=FALSE, echo=FALSE, fig.align="center"}
 # México
@@ -998,6 +996,7 @@ plot_ly(Tlx.2,
 ```
 
 ## Distribución de casos por municipio en Tlaxcala
+
 ```{r Municipios-Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
 NumPosCtl <- Tlx_COVID %>% 
   dplyr::filter(municipio_name == "Contla de Juan Cuamatzi",
@@ -1051,7 +1050,7 @@ CasosSexoContla_plot <- plot_ly(CasosSexoContla, labels = ~Tipo_paciente, values
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)); CasosSexoContla_plot
 ```
 
-``` {r Defunciones-Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
+```{r Defunciones-Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
 Defunciones_Tlax <- Pos_Tlax[-grep("9999-99-99", Pos_Tlax$fecha_def),]
 
 Defunciones_Tlx_2 <- Defunciones_Tlax %>% 
