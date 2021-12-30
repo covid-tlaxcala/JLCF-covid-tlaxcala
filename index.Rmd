@@ -37,40 +37,59 @@ library(kableExtra)
 library(leaflet)
 library(grid)
 library(ggpubr)
+library(data.table)
+library(readr)
+#install.packages("reticulate")
+#library(reticulate)
+#install.packages('iterators')
+#library(iterators)
 ```
 
-```{r Database, include=FALSE, warning=FALSE, fig.align="center"}
-# Downloading the database from government portal
-rm(list=ls())
-temp <- tempfile() 
-download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip",temp)
-date <- substring(gsub("-", "", Sys.Date()),3)
-database_title <- paste(date,"COVID19MEXICO.csv", sep = "")
-#database_title <- paste("211012COVID19MEXICO.csv")
-Mex_Data_COVID <- read.csv(unz(temp, database_title))
-unlink(temp); rm(temp, date, database_title)
+```{r download Database, include=FALSE, warning=FALSE, fig.align="center"}
+rm(list = ls())
+today <- Sys.Date()
+covid_file <- "covid.zip"
+download.file("https://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip", covid_file)
 
-# Datos
+Mex_Data_COVID <- fread(unzip(covid_file))
+Mex_Data_COVID <- Mex_Data_COVID[,c(6,8,9,10,12,13,14,16,36)]
+rm(covid_file)
+file.remove("covid.zip")
+junk <- dir(pattern = ".csv")
+file.remove(junk)
+
+```
+
+```{r process data base, echo = F, warning = F}
 Mex_Data_COVID$ENTIDAD_RES <- sprintf("%02d", as.numeric(Mex_Data_COVID$ENTIDAD_RES))
 Mex_Data_COVID$MUNICIPIO_RES <- sprintf("%03d", as.numeric(Mex_Data_COVID$MUNICIPIO_RES))
-## A partir de la información de mxmaps, agregamos las columnas de region y nombre del estado
 Mex_Data_COVID <- Mex_Data_COVID %>%
   janitor::clean_names() %>%
   left_join(select(df_mxstate, region, state_name),
             by = c("entidad_res" = "region"))
-Mex_Data_COVID$clasificacion_final[Mex_Data_COVID$clasificacion_final == "1"] <- "Positivo"
-Mex_Data_COVID$clasificacion_final[Mex_Data_COVID$clasificacion_final == "2"] <- "Positivo"
-Mex_Data_COVID$clasificacion_final[Mex_Data_COVID$clasificacion_final == "3"] <- "Positivo"
-Mex_Data_COVID <- Mex_Data_COVID[-grep("4", Mex_Data_COVID$clasificacion_final ),]
-Mex_Data_COVID <- Mex_Data_COVID[-grep("5", Mex_Data_COVID$clasificacion_final ),]
-Mex_Data_COVID <- Mex_Data_COVID[-grep("6", Mex_Data_COVID$clasificacion_final ),]
-Mex_Data_COVID$clasificacion_final[Mex_Data_COVID$clasificacion_final == "7"] <- "Negativo"
-Mex_Data_COVID$tipo_paciente[Mex_Data_COVID$tipo_paciente == "1"] <- "Ambulatorio"
-Mex_Data_COVID$tipo_paciente[Mex_Data_COVID$tipo_paciente == "2"] <- "Hospitalizado"
-Mex_Data_COVID$sexo[Mex_Data_COVID$sexo == "2"] <- "Hombre"
-Mex_Data_COVID$sexo[Mex_Data_COVID$sexo == "1"] <- "Mujer"
+
+Mex_Data_COVID <- Mex_Data_COVID[clasificacion_final != 4]
+Mex_Data_COVID <- Mex_Data_COVID[clasificacion_final != 5]
+Mex_Data_COVID <- Mex_Data_COVID[clasificacion_final != 6]
+
+Mex_Data_COVID$clasificacion_final[Mex_Data_COVID$clasificacion_final == "2"] <- "1"
+Mex_Data_COVID$clasificacion_final[Mex_Data_COVID$clasificacion_final == "3"] <- "1"
+## Clasificación final
+# 1 = positivo
+# 7 = negativo
+
+## tipo paciente
+# 1 = Ambulatorio
+# 2 = Hospitalizado
+
+## sexo
+# 1 = mujer
+# 2 = hombre
 Mex_Data_COVID$value <- Mex_Data_COVID$clasificacion_final
-# grupos de edad
+
+Mex_Data_COVID$fecha_sintomas <- as.character(Mex_Data_COVID$fecha_sintomas)
+
+# # grupos de edad
 Mex_Data_COVID <- Mex_Data_COVID %>% mutate(Age_group = case_when(
   edad >= 90 ~ "Mayores.de.90",
   edad %in% c(80:89) ~ "De.80.a.89",
@@ -80,15 +99,19 @@ Mex_Data_COVID <- Mex_Data_COVID %>% mutate(Age_group = case_when(
   edad %in% c(40:49) ~ "De.40.a.49",
   edad %in% c(30:39) ~ "De.30.a.39",
   edad %in% c(20:29) ~ "De.20.a.29",
-  edad <= 19 ~ "Menores.de.20",
+  edad %in% c(10:19) ~ "De.10.a.19",
+  edad %in% c(5:9) ~ "De.5.a.9",
+  edad <= 4 ~ "Menores.de.5",
   ))
+
 Mex_Data_COVID$Age_group <- factor(Mex_Data_COVID$Age_group,
                                    levels =
                                      c("Mayores.de.90","De.80.a.89",
                                        "De.70.a.79","De.60.a.69",
                                        "De.50.a.59","De.40.a.49",
                                        "De.30.a.39","De.20.a.29",
-                                       "Menores.de.20"))
+                                       "De.10.a.19","De.5.a.9",
+                                       "Menores.de.5"))
 # mes de contagio y mes de defunción
 Mex_Data_COVID <- Mex_Data_COVID %>% mutate(mes_def = case_when(
   startsWith(fecha_def, "2020-01-") ~ "Enero 2020",
@@ -112,7 +135,9 @@ Mex_Data_COVID <- Mex_Data_COVID %>% mutate(mes_def = case_when(
   startsWith(fecha_def, "2021-07-") ~ "Julio 2021",
   startsWith(fecha_def, "2021-08-") ~ "Agosto 2021",
   startsWith(fecha_def, "2021-09-") ~ "Septiembre 2021",
-  startsWith(fecha_def, "2021-10-") ~ "Octubre 2021"))
+  startsWith(fecha_def, "2021-10-") ~ "Octubre 2021",
+  startsWith(fecha_def, "2021-11-") ~ "Noviembre 2021",
+  startsWith(fecha_def, "2021-12-") ~ "Diciembre 2021"))
 
 Mex_Data_COVID <- Mex_Data_COVID %>% mutate(mes_cont = case_when(
   startsWith(fecha_sintomas, "2020-01-") ~ "Enero 2020",
@@ -136,24 +161,31 @@ Mex_Data_COVID <- Mex_Data_COVID %>% mutate(mes_cont = case_when(
   startsWith(fecha_sintomas, "2021-07-") ~ "Julio 2021",
   startsWith(fecha_sintomas, "2021-08-") ~ "Agosto 2021",
   startsWith(fecha_sintomas, "2021-09-") ~ "Septiembre 2021",
-  startsWith(fecha_sintomas, "2021-10-") ~ "Octubre 2021"))
-  
-Mex_Data_COVID$mes_cont <- factor(Mex_Data_COVID$mes_cont,  levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021", "Octubre 2021"))
-Mex_Data_COVID$mes_def <- factor(Mex_Data_COVID$mes_def,  levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021","Octubre 2021"))
+  startsWith(fecha_sintomas, "2021-10-") ~ "Octubre 2021",
+  startsWith(fecha_sintomas, "2021-11-") ~ "Noviembre 2021",
+  startsWith(fecha_sintomas, "2021-12-") ~ "Diciembre 2021"))
+
+Mex_Data_COVID$mes_cont <- factor(Mex_Data_COVID$mes_cont,  levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021", "Octubre 2021","Noviembre 2021","Diciembre 2021"))
+Mex_Data_COVID$mes_def <- factor(Mex_Data_COVID$mes_def,  levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021","Octubre 2021","Noviembre 2021","Diciembre 2021"))
 ```
 
 ```{r Pos/Neg, echo = F, warning=F}
 NumPosMex <- Mex_Data_COVID %>% 
-  dplyr::filter(clasificacion_final == "Positivo") %>% 
+  dplyr::filter(clasificacion_final == 1) %>% 
   dplyr::summarise("Casos" = dplyr::n())
+
 NumPosMex$Resultado <- "Positivo"
+
+
 NumNegMex <- Mex_Data_COVID %>% 
-  dplyr::filter(clasificacion_final == "Negativo") %>% 
+  dplyr::filter(clasificacion_final == 7) %>% 
   dplyr::summarise("Casos" = dplyr::n())
+
 NumNegMex$Resultado <- "Negativo"
+
 CasosMex <- bind_rows(NumPosMex, NumNegMex)
 rm(NumPosMex, NumNegMex)
-today <- Sys.Date()
+
 CasosMex_plot <- plot_ly(CasosMex, labels = ~Resultado, values = ~Casos, type = 'pie',
                          textposition = 'inside',
                          texttemplate = "%{label}: %{value:,}",
@@ -161,18 +193,22 @@ CasosMex_plot <- plot_ly(CasosMex, labels = ~Resultado, values = ~Casos, type = 
                          marker = list(colors = colors, line = list(color = '#FFFFFF', width = 1))) %>% layout(title = paste('Resultados de las pruebas hechas en México de COVID-19 al', today, sep = " "),
          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE));CasosMex_plot
+
 rm(CasosMex, CasosMex_plot)
+
+
 ```
 
-## Casos en México
+```{r , echo=FALSE}
+Pos_Mx <- Mex_Data_COVID[clasificacion_final == 1, ]
 
-```{r Mapa Mx, echo = F, warning=F}
-Pos_Mx <- Mex_Data_COVID[grep("Positivo", Mex_Data_COVID$clasificacion_final),]
 mn_Mx <- Pos_Mx %>% 
   count(state_name) %>% 
   left_join(select(df_mxstate, region, state_name),
             by = c("state_name" = "state_name"))
+
 names(mn_Mx) <- c("state_name", "value", "region")
+
 pal <- colorNumeric("Reds", domain = mn_Mx$value)
 mxstate_leaflet(mn_Mx,
                 pal,
@@ -188,9 +224,16 @@ rm(mn_Mx, pal)
 mn_Mx_Edos <- Pos_Mx %>% 
   count(fecha_sintomas, tipo_paciente, sexo, state_name)
 
+mn_Mx_Edos$tipo_paciente[mn_Mx_Edos$tipo_paciente == 1] <- "Ambulatorio"
+mn_Mx_Edos$tipo_paciente[mn_Mx_Edos$tipo_paciente == 2] <- "Hospitalizado"
+
 plot_casos_estados <- ggplot(mn_Mx_Edos, aes(x = as.Date(fecha_sintomas), y = n, fill = tipo_paciente))+
   geom_bar(stat = "identity", binwidth = 0) +
   theme_classic()+
+  geom_vline(xintercept = as.Date('2021-01-01'), 
+             linetype = "dotdash", alpha = 0.5)+
+  geom_vline(xintercept = as.Date('2022-01-01'), 
+             linetype = "dotdash", alpha = 0.5)+
   facet_wrap(~state_name, scales = "free") +
   scale_fill_manual("Tipo de paciente", 
                     values = c("Hospitalizado" = "green", 
@@ -215,11 +258,16 @@ plot_casos_estados <- ggplot(mn_Mx_Edos, aes(x = as.Date(fecha_sintomas), y = n,
                                   hjust = 0.5))+
   scale_x_date(date_breaks = "months" , date_labels = "%b")
 title_plot_cases <- paste("Casos_estados_", today, ".jpg", sep = "")
-ggsave(title_plot_cases, plot_casos_estados, dpi = 500, width = 13, height = 9)
+ggsave(title_plot_cases, plot_casos_estados, dpi = 500, width = 20, height = 14)
 
 mn_Def_Mx_Edos <- Pos_Mx %>% 
   count(fecha_def, tipo_paciente, sexo, state_name)
-mn_Def_Mx_Edos <- mn_Def_Mx_Edos[-grep("9999-99-99", mn_Def_Mx_Edos$fecha_def),]
+
+mn_Def_Mx_Edos <- mn_Def_Mx_Edos[fecha_def != "9999-99-99", ]
+
+mn_Def_Mx_Edos$tipo_paciente[mn_Def_Mx_Edos$tipo_paciente == 1] <- "Ambulatorio"
+
+mn_Def_Mx_Edos$tipo_paciente[mn_Def_Mx_Edos$tipo_paciente == 2] <- "Hospitalizado"
 
 plot_defunciones_estados <- ggplot(mn_Def_Mx_Edos, aes(x = as.Date(fecha_def), 
                                                        y = n, 
@@ -238,7 +286,7 @@ plot_defunciones_estados <- ggplot(mn_Def_Mx_Edos, aes(x = as.Date(fecha_def),
         plot.title = element_text(face = "bold", color = "red", size = 14, hjust = 0.5))+
   scale_x_date(date_breaks = "months" , date_labels = "%b")
 title_plot_def <- paste("Defunciones_estados_", today, ".jpg", sep = "")
-ggsave(title_plot_def, plot_defunciones_estados, dpi = 500, width = 13, height = 9)
+ggsave(title_plot_def, plot_defunciones_estados, dpi = 500, width = 20, height = 14)
 
 rm(mn_Mx_Edos, plot_casos_estados, mn_Def_Mx_Edos, plot_defunciones_estados, title_plot_cases, title_plot_def)
 ```
@@ -248,13 +296,19 @@ mn_Mx_2 <- Pos_Mx %>%
   count(fecha_sintomas, tipo_paciente)
 
 sum_pacientes <- aggregate(mn_Mx_2$n, by=list(Tipo_paciente=mn_Mx_2$tipo_paciente), FUN=sum)
-n_amb <- sum_pacientes[grep("Ambulatorio", sum_pacientes$Tipo_paciente),]
+
+setDT(sum_pacientes)
+
+n_amb <- sum_pacientes[Tipo_paciente == 1, ]
 n_amb <- sum(n_amb$x)
 
-n_hosp <- sum_pacientes[grep("Hospitalizado", sum_pacientes$Tipo_paciente),]
+n_hosp <- sum_pacientes[Tipo_paciente == 2, ]
 n_hosp <- sum(n_hosp$x)
 
 n_Mx <- sum(mn_Mx_2$n)
+
+mn_Mx_2$tipo_paciente[mn_Mx_2$tipo_paciente == "1"] <- "Ambulatorio"
+mn_Mx_2$tipo_paciente[mn_Mx_2$tipo_paciente == "2"] <- "Hospitalizado"
 
 mn_Mx_2$tipo_paciente <- factor(mn_Mx_2$tipo_paciente, levels = c("Hospitalizado", "Ambulatorio"))
 
@@ -263,6 +317,8 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                           y = ~n,
                           color = ~tipo_paciente, 
                           type = 'bar',
+                         #name = "Ambulatorio",
+                         #name = "Hospitalizado",
                           colors = c("blue","gray")) %>% 
   layout(title = ~paste("<b>Casos positivos en México (n = </b>",n_Mx,"<b>)</b>"),
          yaxis = list(title = '<b>Casos</b>',
@@ -330,71 +386,38 @@ plot_Casos_Mx <- plot_ly(mn_Mx_2,
                 yref = "y"))) %>% 
   config(locale = "es");plot_Casos_Mx
 
-## Mujeres
-MujPosMexAmb <- Pos_Mx %>% 
-  dplyr::filter(sexo == "Mujer" & tipo_paciente == "Ambulatorio" ) %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-
-MujPosMexAmb$Sexo <- "Mujer"
-MujPosMexAmb$Paciente <- "Ambulatorio"
-
-MujPosMexHosp <- Pos_Mx %>% 
-  dplyr::filter(sexo == "Mujer" & tipo_paciente == "Hospitalizado" ) %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-MujPosMexHosp$Sexo <- "Mujer"
-MujPosMexHosp$Paciente <- "Hospitalizado"
-## Hombres
-HomPosMexAmb <- Pos_Mx %>% 
-  dplyr::filter(sexo == "Hombre" & tipo_paciente == "Ambulatorio") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-HomPosMexAmb$Sexo <- "Hombre"
-HomPosMexAmb$Paciente <- "Ambulatorio"
-
-HomPosMexHosp <- Pos_Mx %>% 
-  dplyr::filter(sexo == "Hombre" & tipo_paciente == "Hospitalizado") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-HomPosMexHosp$Sexo <- "Hombre"
-HomPosMexHosp$Paciente <- "Hospitalizado"
-CasosSexoMex <- bind_rows(MujPosMexAmb, MujPosMexHosp, HomPosMexAmb, HomPosMexHosp)
-CasosSexoMex$Tipo_paciente <- paste(CasosSexoMex$Sexo, CasosSexoMex$Paciente)
-
-CasosSexoMex_plot <- plot_ly(CasosSexoMex, labels = ~Tipo_paciente, values = ~Casos, type = 'pie',
-                         textposition = 'inside',
-                         texttemplate = "%{label}: %{value:,}",
-                         insidetextfont = list(color = c("white", "black", "white","black")),
-                         marker = list(colors = c("violet","pink","royalblue3","lightblue"), line = list(color = '#FFFFFF', width = 1))) %>% layout(title = paste('Resultados por genero en México de COVID-19 al', today, sep = " "),
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)); CasosSexoMex_plot
-
-rm(mn_Mx_2, sum_pacientes, n_amb, n_hosp, n_Mx, plot_Casos_Mx, MujPosMexAmb, MujPosMexHosp, HomPosMexAmb, HomPosMexHosp, CasosSexoMex, CasosSexoMex_plot)
+rm(mn_Mx_2, sum_pacientes, n_amb, n_hosp, n_Mx)
 ```
 
-```{r Contagios Mx, warning=FALSE, echo=FALSE, fig.align="center"}
-# México
-# Age group
-Mex_Data_COVID$fecha_sintomas <- as.Date(Mex_Data_COVID$fecha_sintomas)
 
+```{r Contagios Mx, warning=FALSE, echo=FALSE, fig.align="center"}
 Mx.1 <- Mex_Data_COVID %>% 
   count(fecha_sintomas, Age_group, value)
 
-Mx.1 <- Mx.1[-grep("Negativo",Mx.1$value),]
+Mx.1 <- Mx.1[value != 7, ]
+Mx.1$fecha_sintomas <- as.Date(Mx.1$fecha_sintomas)
 
 Mx.2 <- Mx.1 %>% 
   pivot_wider(names_from = Age_group,
               values_from = n)
-
 plot_ly(Mx.2,
         x =~fecha_sintomas,
-        y =~Menores.de.20,
-        name = 'Menores de 20',
+        y =~Menores.de.5,
+        name = 'Menores de 5',
         type = 'scatter',
         mode = 'none',
         stackgroup = 'one',
         groupnorm = 'percent',
         fillcolor = '#53EAEA') %>% 
+  add_trace(y =~De.5.a.9,
+            name = 'De 5 a 9',
+            fillcolor = 'grey') %>% 
+  add_trace(y =~De.10.a.19,
+            name = 'De 10 a 19',
+            fillcolor = 'darkviolet') %>% 
   add_trace(y =~De.20.a.29,
             name = 'De 20 a 29',
-            fillcolor = '#50CB86') %>% 
+            fillcolor = 'ligthblue') %>% 
   add_trace(y =~De.30.a.39,
             name = 'De 30 a 39',
             fillcolor = '#700961') %>%
@@ -426,72 +449,14 @@ plot_ly(Mx.2,
   config(locale = "es")
 
 rm(Mx.1, Mx.2)
+
 ```
-
-```{r Contagios-Hospitalizados Mx, warning=FALSE, echo=FALSE, fig.align="center"}
-#Hospitalizados
-d.f <- Mex_Data_COVID %>% 
-  count(fecha_sintomas, tipo_paciente, Age_group, value)
-
-d.f <- d.f[grep("Hospitalizado",d.f$tipo_paciente),]
-
-d.f <- d.f[-grep("Negativo",d.f$value),]
-
-d.f.2 <- d.f %>% 
-  pivot_wider(names_from = Age_group,
-              values_from = n)
-
-plot_ly(d.f.2,
-        x =~fecha_sintomas,
-        y =~Menores.de.20,
-        name = 'Menores de 20',
-        type = 'scatter',
-        mode = 'none',
-        stackgroup = 'one',
-        groupnorm = 'percent',
-        fillcolor = '#53EAEA') %>% 
-  add_trace(y =~De.20.a.29,
-            name = 'De 20 a 29',
-            fillcolor = '#50CB86') %>% 
-  add_trace(y =~De.30.a.39,
-            name = 'De 30 a 39',
-            fillcolor = '#700961') %>%
-  add_trace(y =~De.40.a.49,
-            name = 'De 40 a 49',
-            fillcolor = '#5CB8DF')%>%
-  add_trace(y =~De.50.a.59,
-            name = 'De 50 a 59',
-            fillcolor = '#986DBF') %>%
-  add_trace(y =~De.60.a.69,
-            name = 'De 60 a 69',
-            fillcolor = '#DA2CA3') %>% 
-  add_trace(y =~De.70.a.79,
-            name = 'De 70 a 79',
-            fillcolor = '#EECA57') %>% 
-  add_trace(y =~De.80.a.89,
-            name = 'De 80 a 89',
-            fillcolor = '#F12929') %>% 
-  add_trace(y =~Mayores.de.90,
-            name = 'Mayores de 90',
-            fillcolor = '#45C903') %>% 
-  layout(title = '<b>Hospitalizados en México por grupo de edad</b>',
-         xaxis = list(title = "<b>Mes</b>",
-                      showgrid = F,
-                      tickformat = "%d %B<br>%Y"),
-         yaxis = list(title = "<b>Porcentaje de hospitalizaciones</b>",
-                      showgrid = F,
-                      ticksuffix = '%')) %>% 
-  config(locale = "es")
-
-rm(d.f, d.f.2)
-```
-
-## Distribución de defunciones en México
 
 ```{r Defunciones-Mx, echo = FALSE, fig.align="center", warning=F}
-Decesos_Mx <- Pos_Mx[-grep("9999-99-99",Pos_Mx$fecha_def),]
+Decesos_Mx <- Pos_Mx[fecha_def != "9999-99-99", ]
+
 NumFallMex <- Decesos_Mx %>% 
-  dplyr::filter(value == "Positivo") %>% 
+  dplyr::filter(value == 1) %>% 
   dplyr::summarise("Decesos acumulados en México" = dplyr::n())
 
 Decesos_Mx_St <- Decesos_Mx %>% 
@@ -515,11 +480,18 @@ Decesos_Mx_2 <- Decesos_Mx %>%
   count(fecha_def, tipo_paciente)
 
 sum_decesos <- aggregate(Decesos_Mx_2$n, by=list(Tipo_paciente=Decesos_Mx_2$tipo_paciente), FUN=sum)
-n_amb <- sum_decesos[grep("Ambulatorio", sum_decesos$Tipo_paciente),]
+setDT(sum_decesos)
+n_amb <- sum_decesos[Tipo_paciente == 1,]
 n_amb <- sum(n_amb$x)
-n_hosp <- sum_decesos[grep("Hospitalizado", sum_decesos$Tipo_paciente),]
+
+n_hosp <- sum_decesos[Tipo_paciente == 2,]
 n_hosp <- sum(n_hosp$x)
+
 n_Mx <- sum(Decesos_Mx_2$n)
+
+Decesos_Mx_2$tipo_paciente[Decesos_Mx_2$tipo_paciente == 1] <- "Ambulatorio"
+Decesos_Mx_2$tipo_paciente[Decesos_Mx_2$tipo_paciente == 2] <- "Hospitalizado"
+
 Decesos_Mx_2$tipo_paciente <- factor(Decesos_Mx_2$tipo_paciente, levels = c("Hospitalizado", "Ambulatorio"))
 plot_Casos_Mx <- plot_ly(Decesos_Mx_2,
                           x = ~fecha_def,
@@ -541,15 +513,15 @@ plot_Casos_Mx <- plot_ly(Decesos_Mx_2,
                             font=list(color = "darkgreen")),
          bargap = 0,
          shapes = list(
-           list(type = "rect", # third wave ## Current
+           list(type = "rect", # third wave 
                 fillcolor = "pink",
                 line = list(color = "pink"),
                 opacity = 0.35,
                 x0 = "2021-07-15",
-                x1 = today,
+                x1 = "2021-10-01",
                 xref = "x",
                 y0 = min(Decesos_Mx_2$n),
-                y1 = 800,
+                y1 = 890,
                 yref = "y"),
            list(type = "rect", # second wave
                 fillcolor = "red",
@@ -572,46 +544,6 @@ plot_Casos_Mx <- plot_ly(Decesos_Mx_2,
                 y1 = 900,
                 yref = "y"))) %>% 
   config(locale = "es");plot_Casos_Mx
-## Mujeres
-MujDecMexAmb <- Decesos_Mx %>% 
-  dplyr::filter(sexo == "Mujer" & tipo_paciente == "Ambulatorio" ) %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-MujDecMexAmb$Sexo <- "Mujer"
-MujDecMexAmb$Paciente <- "Ambulatorio"
-MujDecMexHosp <- Decesos_Mx %>% 
-  dplyr::filter(sexo == "Mujer" & tipo_paciente == "Hospitalizado" ) %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-MujDecMexHosp$Sexo <- "Mujer"
-MujDecMexHosp$Paciente <- "Hospitalizado"
-## Hombres
-HomDecMexAmb <- Decesos_Mx %>% 
-  dplyr::filter(sexo == "Hombre" & tipo_paciente == "Ambulatorio") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-HomDecMexAmb$Sexo <- "Hombre"
-HomDecMexAmb$Paciente <- "Ambulatorio"
-HomDecMexHosp <- Decesos_Mx %>% 
-  dplyr::filter(sexo == "Hombre" & tipo_paciente == "Hospitalizado") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-HomDecMexHosp$Sexo <- "Hombre"
-HomDecMexHosp$Paciente <- "Hospitalizado"
-DecesosSexoMex <- bind_rows(MujDecMexAmb, MujDecMexHosp, HomDecMexAmb, HomDecMexHosp)
-DecesosSexoMex$Tipo_paciente <- paste(DecesosSexoMex$Sexo, DecesosSexoMex$Paciente)
-
-DecesosSexoMex$Tipo_paciente <- factor(DecesosSexoMex$Tipo_paciente, levels = c("Mujer Hospitalizado",
-                                                                                "Mujer Ambulatorio",
-                                                                                "Hombre Hospitalizado",
-                                                                                "Hombre Ambulatorio"))
-DecesosSexoMex_plot <- plot_ly(DecesosSexoMex, 
-                               labels = ~Tipo_paciente, 
-                               values = ~Casos, 
-                               type = 'pie',
-                         textposition = 'inside',
-                         texttemplate = "%{label}: %{value:,}",
-                         insidetextfont = list(color = c("white", "black", "white","black")),
-                         marker = list(colors = c("violet","pink","royalblue3","lightblue"), line = list(color = '#FFFFFF', width = 1))) %>% layout(title = paste('Decesos México de COVID-19 al', today, sep = " "),
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)); DecesosSexoMex_plot
-rm(Decesos_Mx, NumFallMex, Decesos_Mx_St, Decesos_Mx_2, n_amb, n_hosp, n_Mx, plot_Casos_Mx,sum_decesos, MujDecMexAmb, MujDecMexHosp, HomDecMexAmb, HomDecMexHosp, DecesosSexoMex)
 ```
 
 ```{r Defunciones Mx, warning=FALSE, echo=FALSE, fig.align="center"}
@@ -620,20 +552,26 @@ rm(Decesos_Mx, NumFallMex, Decesos_Mx_St, Decesos_Mx_2, n_amb, n_hosp, n_Mx, plo
 Mx.1 <- Mex_Data_COVID %>% 
   count(fecha_def,Age_group,value)
 
-Mx.1 <- Mx.1[-grep("Negativo",Mx.1$value),]
+Mx.1 <- Mx.1[value != 7,]
 Mx.2 <- Mx.1 %>% 
   pivot_wider(names_from = Age_group,
               values_from = n)
 Mx.2$fecha_def <- as.Date(Mx.2$fecha_def)
 plot_ly(Mx.2,
         x =~fecha_def,
-        y =~Menores.de.20,
-        name = 'Menores de 20',
+        y =~Menores.de.5,
+        name = 'Menores de 5',
         type = 'scatter',
         mode = 'none',
         stackgroup = 'one',
         groupnorm = 'percent',
         fillcolor = '#53EAEA') %>% 
+  add_trace(y =~De.5.a.9,
+            name = 'De 5 a 9',
+            fillcolor = 'grey') %>% 
+  add_trace(y =~De.10.a.19,
+            name = 'De 10 a 19',
+            fillcolor = 'darkviolet') %>% 
   add_trace(y =~De.20.a.29,
             name = 'De 20 a 29',
             fillcolor = '#50CB86') %>% 
@@ -669,80 +607,6 @@ plot_ly(Mx.2,
 rm(Mx.1, Mx.2)
 ```
 
-```{r Defunciones-hospitalizados Mx, warning=FALSE, echo=FALSE, fig.align="center"}
-#Hospitalizados
-d.f <- Mex_Data_COVID %>% 
-  count(fecha_def,tipo_paciente,Age_group,value)
-
-d.f <- d.f[-grep("Negativo",d.f$value),]
-d.f <- d.f[grep("Hospitalizado",d.f$tipo_paciente),]
-d.f.2 <- d.f %>% 
-  pivot_wider(names_from = Age_group,
-              values_from = n)
-d.f.2$fecha_def <- as.Date(d.f.2$fecha_def)
-plot_ly(d.f.2,
-        x =~fecha_def,
-        y =~Menores.de.20,
-        name = 'Menores de 20',
-        type = 'scatter',
-        mode = 'none',
-        stackgroup = 'one',
-        groupnorm = 'percent',
-        fillcolor = '#53EAEA') %>% 
-  add_trace(y =~De.20.a.29,
-            name = 'De 20 a 29',
-            fillcolor = '#50CB86') %>% 
-  add_trace(y =~De.30.a.39,
-            name = 'De 30 a 39',
-            fillcolor = '#700961') %>%
-  add_trace(y =~De.40.a.49,
-            name = 'De 40 a 49',
-            fillcolor = '#5CB8DF')%>%
-  add_trace(y =~De.50.a.59,
-            name = 'De 50 a 59',
-            fillcolor = '#986DBF') %>%
-  add_trace(y =~De.60.a.69,
-            name = 'De 60 a 69',
-            fillcolor = '#DA2CA3') %>% 
-  add_trace(y =~De.70.a.79,
-            name = 'De 70 a 79',
-            fillcolor = '#EECA57') %>% 
-  add_trace(y =~De.80.a.89,
-            name = 'De 80 a 89',
-            fillcolor = '#F12929') %>% 
-  add_trace(y =~Mayores.de.90,
-            name = 'Mayores de 90',
-            fillcolor = '#45C903') %>% 
-  layout(title = '<b>Defunciones de hospitalizados en México por grupo de edad</b>',
-         xaxis = list(title = "<b>Mes</b>",
-                      showgrid = F,
-                      tickformat = "%d %B<br>%Y"),
-         yaxis = list(title = "<b>Porcentaje de defunciones hospitalizados</b>",
-                      showgrid = F,
-                      ticksuffix = '%'))%>% 
-  config(locale = "es")
-
-rm(d.f, d.f.2)
-```
-
-```{r Porcentaje Defunciones México,warning=FALSE, echo=FALSE, fig.align="center", eval = F}
-names(mn_Mx)[names(mn_Mx) == "value"] <- "Infectados"
-names(Decesos_Mx_St)[names(Decesos_Mx_St) == "value"] <- "Decesos"
-PorcentajeDecesos_df <- mn_Mx %>% 
-  left_join(select(Decesos_Mx_St, Decesos, region),
-            by = c("region" =  "region"))
-PorcentajeDecesos_df$value <- round(((100/PorcentajeDecesos_df$Infectados))*PorcentajeDecesos_df$Decesos, 2)
-pal_1 <- colorNumeric("Greens", domain = PorcentajeDecesos_df$value)
-mxstate_leaflet(PorcentajeDecesos_df,
-                pal_1,
-                ~ pal_1(value),
-                ~sprintf("Estado: %s<br/>Porcentaje de Defunciones: %s",
-                         state_name, value)) %>% 
-  addLegend(position = "bottomleft", pal = pal_1, values = PorcentajeDecesos_df$value) %>%
-  addProviderTiles("CartoDB.Positron")
-rm(mn_Mx, Decesos_Mx_St, PorcentajeDecesos_df)
-```
-
 ```{r, acumulados Mx, echo = F, warning=F}
 df <- Pos_Mx %>% 
   count(fecha_sintomas, clasificacion_final)
@@ -772,10 +636,11 @@ Tlx_municipio <- df_mxmunicipio[df_mxmunicipio$state_code == 29,] # recordar que
 Tlx_COVID <- Tlx_COVID %>%
   left_join(select(Tlx_municipio, region, municipio_code, municipio_name),
             by = c("municipio_res" = "municipio_code"))
+rm(Tlx_municipio)
 ```
 
 ```{r Tlax-Pos, include=FALSE, fig.align="center"}
-Pos_Tlax <- Tlx_COVID[grep("Positivo", Tlx_COVID$value),]
+Pos_Tlax <- Tlx_COVID[value == 1,]
 names(Pos_Tlax)[names(Pos_Tlax) == "municipio_res"] <- "municipio_code"
 
 
@@ -785,16 +650,18 @@ mn_Tlx <- Pos_Tlax %>%
 ```
 
 ```{r Mapa Tlax, warning=FALSE, echo=FALSE, fig.align="center"}
-NumPosTlx <- Mex_Data_COVID %>% 
-  dplyr::filter(value == "Positivo",
+NumPosTlx <- Tlx_COVID %>% 
+  dplyr::filter(value == 1,
                 state_name == "Tlaxcala") %>% 
   dplyr::summarise("Casos" = dplyr::n())
 NumPosTlx$Resultado <- "Positivo"
-NumNegTlax <- Mex_Data_COVID %>% 
-  dplyr::filter(value == "Negativo",
+
+NumNegTlax <- Tlx_COVID %>% 
+  dplyr::filter(value == 7,
                 state_name == "Tlaxcala") %>% 
   dplyr::summarise("Casos" = dplyr::n())
 NumNegTlax$Resultado <- "Negativo"
+
 CasosTlax <- bind_rows(NumPosTlx, NumNegTlax)
 rm(NumNegTlax)
 CasosTlax_plot <- plot_ly(CasosTlax, labels = ~Resultado, values = ~Casos, type = 'pie',
@@ -804,8 +671,9 @@ CasosTlax_plot <- plot_ly(CasosTlax, labels = ~Resultado, values = ~Casos, type 
                          marker = list(colors = colors, line = list(color = '#FFFFFF', width = 1))) %>% layout(title = paste('Resultados de las pruebas hechas en Tlaxcala de COVID-19 al', today, sep = " "),
          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE));CasosTlax_plot
+
 ## Mapa de casos en Tlaxcala
-mn_Tlx$state_name <- rep("Tlaxcala",length(mn_Tlx))
+mn_Tlx$state_name <- rep("Tlaxcala",length(mn_Tlx$municipio_name))
 pal <- colorNumeric("Reds", domain = mn_Tlx$value)
 names(mn_Tlx) <- c("municipio_name", "region", "municipio_code", "value","state_name" )
 mxmunicipio_leaflet(mn_Tlx,
@@ -824,11 +692,17 @@ mn_Tlx_2 <- Pos_Tlax %>%
   count(fecha_sintomas, tipo_paciente)
 
 n_Tlx <- sum(mn_Tlx_2$n)
+
 sum_Tlx <- aggregate(mn_Tlx_2$n, by=list(Tipo_paciente=mn_Tlx_2$tipo_paciente), FUN=sum)
-n_amb <- sum_Tlx[grep("Ambulatorio", sum_Tlx$Tipo_paciente),]
+setDT(sum_Tlx)
+n_amb <- sum_Tlx[Tipo_paciente == 1, ]
 n_amb <- sum(n_amb$x)
-n_hosp <- sum_Tlx[grep("Hospitalizado", sum_Tlx$Tipo_paciente),]
+n_hosp <- sum_Tlx[Tipo_paciente == 2,]
 n_hosp <- sum(n_hosp$x)
+
+mn_Tlx_2$tipo_paciente[mn_Tlx_2$tipo_paciente == 1] <- "Ambulatorio"
+mn_Tlx_2$tipo_paciente[mn_Tlx_2$tipo_paciente == 2] <- "Hospitalizado"
+
 mn_Tlx_2$tipo_paciente <- factor(mn_Tlx_2$tipo_paciente, levels = c("Hospitalizado", "Ambulatorio"))
 plot_Casos_Tlx <- plot_ly(mn_Tlx_2, x = ~fecha_sintomas, y = ~n, color = ~tipo_paciente, type = 'bar',
                       colors = c("blue","gray")) %>% 
@@ -842,7 +716,7 @@ plot_Casos_Tlx <- plot_ly(mn_Tlx_2, x = ~fecha_sintomas, y = ~n, color = ~tipo_p
          barmode = 'stack',
          annotations = list(text = ~paste("<b>Hospitalizados:</b>", n_hosp,
                                           "<br><b>Ambulatorios:</b>", n_amb),
-                            x = "2020-04-25", y = 145, showarrow=F,
+                            x = "2020-06-25", y = 165, showarrow=F,
                             font=list(color = "darkgreen")),
          bargap = 0,
          shapes = list(
@@ -889,59 +763,6 @@ plot_Casos_Tlx <- plot_ly(mn_Tlx_2, x = ~fecha_sintomas, y = ~n, color = ~tipo_p
   config(locale = "es");plot_Casos_Tlx
 
 rm(mn_Tlx_2, n_Tlx, sum_Tlx, n_amb, n_hosp)
-# Mujeres
-NumMujHospTlx <- Mex_Data_COVID %>% 
-  dplyr::filter(state_name == "Tlaxcala",
-                sexo == "Mujer", 
-                value == "Positivo",
-                tipo_paciente == "Hospitalizado") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-NumMujHospTlx$Resultado <- "Positivo"
-NumMujHospTlx$Sexo <- "Mujer"
-NumMujHospTlx$Paciente <- "Hospitalizado"
-NumMujAmbTlx <- Mex_Data_COVID %>% 
-  dplyr::filter(state_name == "Tlaxcala",
-                sexo == "Mujer", 
-                value == "Positivo",
-                tipo_paciente == "Ambulatorio") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-NumMujAmbTlx$Resultado <- "Positivo"
-NumMujAmbTlx$Sexo <- "Mujer"
-NumMujAmbTlx$Paciente <- "Ambulatorio"
-# Hombres
-NumHomHospTlx <- Mex_Data_COVID %>% 
-  dplyr::filter(state_name == "Tlaxcala",
-                sexo == "Hombre", 
-                value == "Positivo",
-                tipo_paciente == "Hospitalizado") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-NumHomHospTlx$Resultado <- "Positivo"
-NumHomHospTlx$Sexo <- "Hombre"
-NumHomHospTlx$Paciente <- "Hospitalizado"
-NumHomAmbTlx <- Mex_Data_COVID %>% 
-  dplyr::filter(state_name == "Tlaxcala",
-                sexo == "Hombre", 
-                value == "Positivo",
-                tipo_paciente == "Ambulatorio") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-NumHomAmbTlx$Resultado <- "Positivo"
-NumHomAmbTlx$Sexo <- "Hombre"
-NumHomAmbTlx$Paciente <- "Ambulatorio"
-CasosSexoTlax <- bind_rows(NumMujHospTlx, NumMujAmbTlx, NumHomHospTlx, NumHomAmbTlx)
-rm(NumMujHospTlx, NumMujAmbTlx, NumHomHospTlx, NumHomAmbTlx)
-CasosSexoTlax$Tipo_paciente <- paste(CasosSexoTlax$Sexo, CasosSexoTlax$Paciente)
-CasosSexoTlax_plot <- plot_ly(CasosSexoTlax, labels = ~Tipo_paciente, values = ~Casos,
-                              type = 'pie',
-                              textposition = 'inside',
-                              texttemplate = "%{label}: %{value:,}",
-                              insidetextfont = list(color = c("white", "black",
-                                                              "white","black")),
-                              marker = list(colors = c("violet","pink","royalblue3","lightblue"),
-                                            line = list(color = '#FFFFFF', width = 1))) %>% 
-  layout(title = paste('<b>Casos por sexo en Tlaxcala de COVID-19 al</b>', today, sep = " "),
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE));CasosSexoTlax_plot
-rm(CasosSexoTlax)
 ```
 
 ```{r Contagios Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
@@ -956,13 +777,19 @@ Tlx.2 <- Tlx.1 %>%
 
 plot_ly(Tlx.2,
         x =~mes_cont,
-        y =~Menores.de.20,
-        name = 'Menores de 20',
+        y =~Menores.de.5,
+        name = 'Menores de 5',
         type = 'scatter',
         mode = 'none',
         stackgroup = 'one',
         groupnorm = 'percent',
         fillcolor = '#53EAEA') %>% 
+  add_trace(y =~De.5.a.9,
+            name = 'De 5 a 9',
+            fillcolor = 'grey') %>% 
+  add_trace(y =~De.10.a.19,
+            name = 'De 10 a 19',
+            fillcolor = 'darkviolet') %>% 
   add_trace(y =~De.20.a.29,
             name = 'De 20 a 29',
             fillcolor = '#50CB86') %>% 
@@ -995,63 +822,8 @@ plot_ly(Tlx.2,
                       ticksuffix = '%'))
 ```
 
-## Distribución de casos por municipio en Tlaxcala
-
-```{r Municipios-Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
-NumPosCtl <- Tlx_COVID %>% 
-  dplyr::filter(municipio_name == "Contla de Juan Cuamatzi",
-                value == "Positivo") %>% 
-  dplyr::summarise("Pacientes positivos en Contla" = dplyr::n())
-NumPosHomHospCtl <- Tlx_COVID %>% 
-  dplyr::filter(municipio_name == "Contla de Juan Cuamatzi",
-                value == "Positivo",
-                sexo == "Hombre",
-                tipo_paciente == "Hospitalizado") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-NumPosHomHospCtl$Resultado <- "Positivo"
-NumPosHomHospCtl$Sexo <- "Hombre"
-NumPosHomHospCtl$Paciente <- "Hospitalizado"
-NumPosHomAmbCtl <- Tlx_COVID %>% 
-  dplyr::filter(municipio_name == "Contla de Juan Cuamatzi",
-                value == "Positivo",
-                sexo == "Hombre",
-                tipo_paciente == "Ambulatorio") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-NumPosHomAmbCtl$Resultado <- "Positivo"
-NumPosHomAmbCtl$Sexo <- "Hombre"
-NumPosHomAmbCtl$Paciente <- "Ambulatorio"
-NumPosMujHospCtl <- Tlx_COVID %>% 
-  dplyr::filter(municipio_name == "Contla de Juan Cuamatzi",
-                value == "Positivo",
-                sexo == "Mujer",
-                tipo_paciente == "Hospitalizado") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-NumPosMujHospCtl$Resultado <- "Positivo"
-NumPosMujHospCtl$Sexo <- "Mujer"
-NumPosMujHospCtl$Paciente <- "Hospitalizado"
-NumPosMujAmbCtl <- Tlx_COVID %>% 
-  dplyr::filter(municipio_name == "Contla de Juan Cuamatzi",
-                value == "Positivo",
-                sexo == "Mujer",
-                tipo_paciente == "Ambulatorio") %>% 
-  dplyr::summarise("Casos" = dplyr::n())
-NumPosMujAmbCtl$Resultado <- "Positivo"
-NumPosMujAmbCtl$Sexo <- "Mujer"
-NumPosMujAmbCtl$Paciente <- "Ambulatorio"
-CasosSexoContla <- bind_rows(NumPosHomAmbCtl, NumPosHomHospCtl, NumPosMujAmbCtl, NumPosMujHospCtl)
-rm(NumPosHomAmbCtl, NumPosHomHospCtl, NumPosMujAmbCtl, NumPosMujHospCtl)
-CasosSexoContla$Tipo_paciente <- paste(CasosSexoContla$Sexo, CasosSexoContla$Paciente)
-CasosSexoContla_plot <- plot_ly(CasosSexoContla, labels = ~Tipo_paciente, values = ~Casos, type = 'pie',
-                         textposition = 'inside',
-                         texttemplate = "%{label}: %{value:,}",
-                         insidetextfont = list(color = '#FFFFFF'),
-                         marker = list(colors = c("royalblue3","lightblue","violet","pink"), line = list(color = '#FFFFFF', width = 1))) %>% layout(title = paste('Casos por sexo en Contla de Juan Cuamatzi de COVID-19 al', today, sep = " "),
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)); CasosSexoContla_plot
-```
-
 ```{r Defunciones-Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
-Defunciones_Tlax <- Pos_Tlax[-grep("9999-99-99", Pos_Tlax$fecha_def),]
+Defunciones_Tlax <- Pos_Tlax[fecha_def != "9999-99-99",]
 
 Defunciones_Tlx_2 <- Defunciones_Tlax %>% 
   count(municipio_name, region, municipio_code)
@@ -1075,11 +847,18 @@ Defunciones_Tlx_2 <- Defunciones_Tlax %>%
   count(fecha_def, tipo_paciente)
 
 sum_decesos <- aggregate(Defunciones_Tlx_2$n,                        by=list(Tipo_paciente=Defunciones_Tlx_2$tipo_paciente), FUN=sum)
-n_amb <- sum_decesos[grep("Ambulatorio", sum_decesos$Tipo_paciente),]
+setDT(sum_decesos)
+n_amb <- sum_decesos[Tipo_paciente == 1, ]
 n_amb <- sum(n_amb$x)
-n_hosp <- sum_decesos[grep("Hospitalizado", sum_decesos$Tipo_paciente),]
+n_hosp <- sum_decesos[Tipo_paciente == 2, ]
 n_hosp <- sum(n_hosp$x)
+
 n_def_Tlx <- sum(Defunciones_Tlx_2$n)
+
+Defunciones_Tlx_2$tipo_paciente[Defunciones_Tlx_2$tipo_paciente == 1] <- "Ambulatorio"
+
+Defunciones_Tlx_2$tipo_paciente[Defunciones_Tlx_2$tipo_paciente == 2] <- "Hospitalizado"
+
 Defunciones_Tlx_2$tipo_paciente <- factor(Defunciones_Tlx_2$tipo_paciente, levels = c("Hospitalizado", "Ambulatorio"))
 plot_def_Tlx <- plot_ly(Defunciones_Tlx_2,
                           x = ~fecha_def,
@@ -1101,12 +880,22 @@ plot_def_Tlx <- plot_ly(Defunciones_Tlx_2,
                             font=list(color = "darkgreen")),
          bargap = 0,
          shapes = list(
+           list(type = "rect", # third wave
+                fillcolor = "purple",
+                line = list(color = "purple"),
+                opacity = 0.25,
+                x0 = "2021-08-01",
+                x1 = "2021-10-15",
+                xref = "x",
+                y0 = 0,
+                y1 = 17,
+                yref = "y"),
            list(type = "rect", # second wave
                 fillcolor = "red",
                 line = list(color = "red"),
                 opacity = 0.25,
                 x0 = "2020-12-25",
-                x1 = "2021-02-16",
+                x1 = "2021-04-08",
                 xref = "x",
                 y0 = 0,
                 y1 = 30,
@@ -1115,11 +904,11 @@ plot_def_Tlx <- plot_ly(Defunciones_Tlx_2,
                 fillcolor = "pink",
                 line = list(color = "pink"),
                 opacity = 0.35,
-                x0 = "2020-04-08",
+                x0 = "2020-05-08",
                 x1 = "2020-09-13",
                 xref = "x",
                 y0 = 0,
-                y1 = 25,
+                y1 = 22,
                 yref = "y"))) %>% 
   config(locale = "es"); plot_def_Tlx
 rm(Defunciones_Tlx_2, n_def_Tlx, n_hosp, n_amb)
@@ -1136,13 +925,19 @@ Tlx.2 <- Tlx.1 %>%
               values_from = n)
 plot_ly(Tlx.2,
         x =~mes_def,
-        y =~Menores.de.20,
-        name = 'Menores de 20',
+        y =~Menores.de.5,
+        name = 'Menores de 5',
         type = 'scatter',
         mode = 'none',
         stackgroup = 'one',
         groupnorm = 'percent',
         fillcolor = '#53EAEA') %>% 
+  add_trace(y =~De.5.a.9,
+            name = 'De 5 a 9',
+            fillcolor = 'grey') %>% 
+  add_trace(y =~De.10.a.19,
+            name = 'De 10 a 19',
+            fillcolor = 'darkviolet') %>% 
   add_trace(y =~De.20.a.29,
             name = 'De 20 a 29',
             fillcolor = '#50CB86') %>% 
@@ -1176,9 +971,6 @@ plot_ly(Tlx.2,
 ```
 
 ```{r Boxplot-Tlx, warning=FALSE, echo=FALSE, fig.align="center"}
-#
-##
-Defunciones_Tlax$mes_def <- factor(Defunciones_Tlax$mes_def, levels = c("Marzo 2020", "Abril 2020", "Mayo 2020", "Junio 2020", "Julio 2020", "Agosto 2020", "Septiembre 2020", "Octubre 2020", "Noviembre 2020", "Diciembre 2020", "Enero 2021", "Febrero 2021", "Marzo 2021", "Abril 2021","Mayo 2021","Junio 2021","Julio 2021","Agosto 2021", "Septiembre 2021","Octubre 2021"))
 
 Def_edad_Tlx_meses_plot <- plot_ly(Defunciones_Tlax, 
                                    type = 'box', 
@@ -1189,173 +981,23 @@ Def_edad_Tlx_meses_plot <- plot_ly(Defunciones_Tlax,
          title = ~paste("<b>Distribución de fallecimientos por sexo y edad en Tlaxcala</b>"),
          yaxis = list(title = "Edad"),
          xaxis = list(title = "Mes")) %>% 
-  add_trace(x =~mes_def[Defunciones_Tlax$sexo == 'Hombre'],
-            y =~edad[Defunciones_Tlax$sexo == 'Hombre'],
+  add_trace(x =~mes_def[Defunciones_Tlax$sexo == 2],
+            y =~edad[Defunciones_Tlax$sexo == 2],
             legendgroup = 'Hombre',
             scalegroup = 'Hombre',
             name = 'Hombre',
             color = I("blue")) %>%
-  add_trace(x =~mes_def[Defunciones_Tlax$sexo == 'Mujer'],
-            y =~edad[Defunciones_Tlax$sexo == 'Mujer'],
+  add_trace(x =~mes_def[Defunciones_Tlax$sexo == 1],
+            y =~edad[Defunciones_Tlax$sexo == 1],
             legendgroup = 'Mujer',
             scalegroup = 'Mujer',
             name = 'Mujer',
             color = I("pink"));Def_edad_Tlx_meses_plot
 ```
 
-# Casos activos en México
-
-```{r Activos-Mx, warning=FALSE, echo=FALSE, fig.align="center"}
-# Últimos 15 días (Casos activos)
-active_days <- today-15
-activos_Mx <- Pos_Mx %>% 
-  dplyr::filter(fecha_sintomas > active_days)
-activos_Tlx <- Pos_Mx %>% 
-  dplyr::filter(fecha_sintomas > active_days,
-                state_name == "Tlaxcala")
-
-mnAct_Mx <- activos_Mx %>% 
-  count(state_name)
-names(mnAct_Mx) <- c("state_name", "value")
-
-mnAct_Mx <- mnAct_Mx %>% 
-  left_join(select(df_mxstate, region, state_name),
-            by = c("state_name" = "state_name"))
-pal <- colorNumeric("Blues", domain = mnAct_Mx$value)
-# Activos México
-mxstate_leaflet(mnAct_Mx,
-                pal,
-                ~ pal(value),
-                ~sprintf("Estado: %s<br/>Casos activos: %s",
-                         state_name, value)) %>% 
-  addLegend(position = "bottomleft", pal = pal, values = mnAct_Mx$value) %>%
-  addProviderTiles("CartoDB.Positron")
-# Activos Tlaxcala
-activos_Tlx <- activos_Tlx %>%
-  left_join(select(Tlx_municipio, region, municipio_code, municipio_name),
-            by = c("municipio_res" = "municipio_code"))
-activos_Tlx$municipio_code <- activos_Tlx$municipio_res
-
-mnAct_Tlx <- activos_Tlx %>% 
-  count(municipio_name,region,municipio_code)
-
-names(mnAct_Tlx) <- c("municipio_name","region","municipio_code", "value")
-
-mnAct_Tlx$state_name <- rep("Tlaxcala",length(mnAct_Tlx$municipio_name))
-pal <- colorNumeric("Blues", domain = mnAct_Tlx$value)
-mxmunicipio_leaflet(mnAct_Tlx, 
-                    pal,
-                    ~ pal(value),
-                    ~ sprintf("Estado: %s<br/>Municipio : %s<br/>Casos activos: %s",
-                              state_name, municipio_name, value),
-                    lng = -98.16957,
-                    lat = 19.35029, mapzoom = 9)%>%
-  addLegend(position = "bottomright", pal = pal,
-            values = mnAct_Tlx$value) %>%
-  addProviderTiles("CartoDB.Positron")
-#box plot para casos activos por estado
+```{r}
+rm(list = ls())
 ```
 
-# Estados en alerta
 
-```{r Contagios area-plot Qro, warning=FALSE, echo=FALSE, fig.align="center"}
-edo = "Querétaro"
-edo_COVID <- Mex_Data_COVID[Mex_Data_COVID$state_name == edo,]
-edo_COVID <- edo_COVID[edo_COVID$value == "Positivo",]
-# Estado
-# grupo de edad
-edo.1 <- edo_COVID %>% 
-  count(mes_cont, Age_group)
 
-edo.2 <- edo.1 %>% 
-  pivot_wider(names_from = Age_group,
-              values_from = n)
-
-plot_ly(edo.2,
-        x =~mes_cont,
-        y =~Menores.de.20,
-        name = 'Menores de 20',
-        type = 'scatter',
-        mode = 'none',
-        stackgroup = 'one',
-        groupnorm = 'percent',
-        fillcolor = '#53EAEA') %>% 
-  add_trace(y =~De.20.a.29,
-            name = 'De 20 a 29',
-            fillcolor = '#50CB86') %>% 
-  add_trace(y =~De.30.a.39,
-            name = 'De 30 a 39',
-            fillcolor = '#700961') %>%
-  add_trace(y =~De.40.a.49,
-            name = 'De 40 a 49',
-            fillcolor = '#5CB8DF')%>%
-  add_trace(y =~De.50.a.59,
-            name = 'De 50 a 59',
-            fillcolor = '#986DBF') %>%
-  add_trace(y =~De.60.a.69,
-            name = 'De 60 a 69',
-            fillcolor = '#DA2CA3') %>% 
-  add_trace(y =~De.70.a.79,
-            name = 'De 70 a 79',
-            fillcolor = '#EECA57') %>% 
-  add_trace(y =~De.80.a.89,
-            name = 'De 80 a 89',
-            fillcolor = '#F12929') %>% 
-  add_trace(y =~Mayores.de.90,
-            name = 'Mayores de 90',
-            fillcolor = '#45C903') %>% 
-  layout(title = paste('<b>Contagios en ', edo,' por grupo de edad</b>', sep = ""),
-         xaxis = list(title = "<b>Mes</b>",
-                      showgrid = F),
-         yaxis = list(title = "<b>Porcentaje de contagios</b>",
-                      showgrid = F,
-                      ticksuffix = '%'))
-# Defunciones
-edo.1 <- edo_COVID %>% 
-  count(mes_def, Age_group, value)
-
-edo.1 <- na.omit(edo.1)
-edo.2 <- edo.1 %>% 
-  pivot_wider(names_from = Age_group,
-              values_from = n)
-plot_ly(edo.2,
-        x =~mes_def,
-        y =~Menores.de.20,
-        name = 'Menores de 20',
-        type = 'scatter',
-        mode = 'none',
-        stackgroup = 'one',
-        groupnorm = 'percent',
-        fillcolor = '#53EAEA') %>% 
-  add_trace(y =~De.20.a.29,
-            name = 'De 20 a 29',
-            fillcolor = '#50CB86') %>% 
-  add_trace(y =~De.30.a.39,
-            name = 'De 30 a 39',
-            fillcolor = '#700961') %>%
-  add_trace(y =~De.40.a.49,
-            name = 'De 40 a 49',
-            fillcolor = '#5CB8DF')%>%
-  add_trace(y =~De.50.a.59,
-            name = 'De 50 a 59',
-            fillcolor = '#986DBF') %>%
-  add_trace(y =~De.60.a.69,
-            name = 'De 60 a 69',
-            fillcolor = '#DA2CA3') %>% 
-  add_trace(y =~De.70.a.79,
-            name = 'De 70 a 79',
-            fillcolor = '#EECA57') %>% 
-  add_trace(y =~De.80.a.89,
-            name = 'De 80 a 89',
-            fillcolor = '#F12929') %>% 
-  add_trace(y =~Mayores.de.90,
-            name = 'Mayores de 90',
-            fillcolor = '#45C903') %>% 
-  layout(title = paste('<b>Defunciones en ', edo, ' por grupo de edad</b>'),
-         xaxis = list(title = "<b>Mes</b>",
-                      showgrid = F),
-         yaxis = list(title = "<b>Porcentaje de defunciones</b>",
-                      showgrid = F,
-                      ticksuffix = '%'))
-rm(list=ls())
-```
